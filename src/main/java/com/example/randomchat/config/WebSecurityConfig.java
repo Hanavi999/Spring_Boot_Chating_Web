@@ -1,6 +1,5 @@
 package com.example.randomchat.config;
 
-import com.example.randomchat.handler.MyLogoutSuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,8 +11,6 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @RequiredArgsConstructor
 public class WebSecurityConfig {
-
-    private final MyLogoutSuccessHandler myLogoutSuccessHandler;
 
     @Bean
     PasswordEncoder passwordEncoder() {
@@ -27,6 +24,7 @@ public class WebSecurityConfig {
                 .cors().disable()
                 .authorizeHttpRequests(request -> request
                         .requestMatchers("/login", "/register", "/registerOk").permitAll()
+                        .requestMatchers(("/chat/**")).permitAll()
                         .requestMatchers("/chat/room").hasRole("USER")
                         .anyRequest().authenticated()
                 )
@@ -35,10 +33,7 @@ public class WebSecurityConfig {
                         .usernameParameter("username")
                         .passwordParameter("password")
                         .defaultSuccessUrl("/chat/room", true)
-                )
-                .logout()
-                    .logoutUrl("/logout")
-                    .logoutSuccessHandler(myLogoutSuccessHandler);
+                );
         return http.build();
     }
 

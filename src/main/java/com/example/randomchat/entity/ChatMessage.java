@@ -22,7 +22,7 @@ public class ChatMessage {
     private Long id;
 
     public enum MessageType {
-        ENTER, TALK
+        ENTER, TALK, DEL
     }
 
     private MessageType type;

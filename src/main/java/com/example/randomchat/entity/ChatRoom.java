@@ -12,7 +12,6 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @Entity
-//채팅방 객체
 public class ChatRoom {
 
     @Id

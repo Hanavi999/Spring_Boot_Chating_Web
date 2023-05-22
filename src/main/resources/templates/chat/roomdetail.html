@@ -61,19 +61,14 @@
 <body>
     <div class="container" id="app" v-cloak>
         <div>
-            <h2 th:text="${chatName.getRoomName()}"></h2>
+            <h2>{{roomName}}</h2>
         </div>
         <div class="text-box" id="text-bx">
-            <ul class="list-group" th:each="chating : ${chat}">
-                <li class="list-group-item">
-                        <p th:text="${chating.getSender()  + '-' +  chating.getMessage()}"></p>
-                        <p th:text="${chating.getTime()}"></p>
-                </li>
-            </ul>
             <ul class="list-group">
                 <li class="list-group-item" v-for="message in messages.slice().reverse()">
-                    <div>{{message.sender}} - {{message.message}}</div>
-                    <div>{{message.time}}</div>
+                        <p>{{message.sender}} - {{message.message}}</p>
+                        <p>{{message.time}}</p>
+                        <button type="button" v-if="message.sender == username" @click="deleteMessage(message.id)">X</button>
                 </li>
             </ul>
             <div></div>
@@ -88,7 +83,6 @@
     <script src="/webjars/sockjs-client/1.1.2/sockjs.min.js"></script>
     <script src="/webjars/stomp-websocket/2.3.3-1/stomp.min.js"></script>
     <script>
-
         //alert(document.title);
         // websocket & stomp initialize
         var sock = new SockJS("/ws/chat");
@@ -96,55 +90,99 @@
         var reconnect = 0;
 
         // vue.js
-        var vm = new Vue({
+        var vm;
+        vm = new Vue({
             el: '#app',
             data: {
                 roomId: '',
+                roomName: '',
                 room: {},
+                username: '',
                 sender: '',
                 message: '',
                 time: '',
-                messages: []
+                deleteId: '',
+                messages: [],
+                findChat: [],
             },
             created() {
                 this.roomId = localStorage.getItem('wschat.roomId');
                 this.sender = localStorage.getItem('wschat.sender');
                 this.findRoom();
+                this.allChat();
+                this.findUsername();
             },
             watch: {
-                messages: function() {
-                    this.$nextTick(function() {
+                messages: function () {
+                    this.$nextTick(function () {
                         var textBx = document.getElementById('text-bx');
                         textBx.scrollTop = textBx.scrollHeight;
                     });
                 }
             },
             methods: {
-                findRoom: function() {
-                    axios.get('/chat/room/'+this.roomId).then(response => { this.room = response.data; });
+                findRoom: function () {
+                    axios.get('/chat/room/' + this.roomId).then(response => {
+                        this.room = response.data;
+                        this.roomName = response.data.roomName;
+                    });
                 },
-                sendMessage: function() {
+                findUsername: function () {
+                    axios.get('/chat/login/user').then(response => {
+                        this.username = response.data;
+                    })
+                },
+                allChat: function () {
+                    axios.get('/chat/all/' + this.roomId).then(response => {
+                        const chats = response.data;
+                        for (let i = 0; i < chats.length; i++) {
+                            const chat = chats[i];
+                            this.messages.unshift({
+                                "id": chat.id,
+                                "type": chat.type,
+                                "sender": chat.sender,
+                                "message": chat.message,
+                                "time": chat.time
+                            });
+                        }
+                        console.log(this.messages);
+                    }).catch(error => {
+                        console.error(error);
+                    });
+                },
+                sendMessage: function () {
                     const now = new Date();  // 현재 시간을 얻어옵니다.
                     const isoString = now.toLocaleString();
-                    console.log("now Time !! : " + isoString);
                     ws.send("/app/chat/message", {}, JSON.stringify({
-                        type:'TALK',
-                        roomId:this.roomId,
-                        sender:this.sender,
-                        message:this.message,
+                        type: 'TALK',
+                        roomId: this.roomId,
+                        sender: this.sender,
+                        message: this.message,
                         time: isoString
                     }));
                     this.message = '';
                 },
-                recvMessage: function(recv) {
+                deleteMessage: function (deleteId) {
+                    axios.get('/chat/delete/' + deleteId).then(response => {
+                        console.log("delete correct");
+                        const index = this.messages.findIndex(item => item.id === deleteId);
+                        vm.messages.splice(index, 1);
+                        console.log(this.messages());
+                    });
+                },
+                recvMessage: function (recv) {
                     const now = new Date();  // 현재 시간을 얻어옵니다.
                     const isoString = now.toLocaleString();
-                    this.messages.unshift({
-                        "type":recv.type,
-                        "sender":recv.type=='ENTER'?'[알림]':recv.sender,
-                        "message":recv.message,
-                        "time": recv.type == 'ENTER'? isoString : recv.time
+                    axios.get('/chat/last').then(response => {
+                        this.messages.unshift({
+                            "id": recv.type == 'ENTER' ? '' : response.data.id,
+                            "type": recv.type,
+                            "sender": recv.type == 'ENTER' ? '[알림]' : recv.sender,
+                            "message": recv.message,
+                            "time": recv.type == 'ENTER' ? isoString : recv.time
+                        })
                     })
+
                 }
             }
         });

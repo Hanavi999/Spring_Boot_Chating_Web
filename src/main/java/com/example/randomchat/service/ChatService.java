@@ -6,6 +6,7 @@ import com.example.randomchat.Repository.MemberRepository;
 import com.example.randomchat.entity.ChatMessage;
 import com.example.randomchat.entity.ChatRoom;
 import com.example.randomchat.entity.Member;
+import com.example.randomchat.entity.dto.ChatMessageDto;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,8 +29,9 @@ public class ChatService {
 
     private final ChatMessageRepository chatMessageRepository;
 
+    //의존관게 주입완료되면 실행되는 어노테이션
     @PostConstruct
-    //의존관게 주입완료되면 실행되는 코드
+    // 이 코드가 없으면 chatRooms가 초기화가 안되서 nullPointException이 일어남
     private void init() {
         chatRooms = new LinkedHashMap<>();
     }
@@ -37,6 +39,7 @@ public class ChatService {
     //채팅방 불러오기
     public List<ChatRoom> findAllRoom() {
         List<ChatRoom> result = new ArrayList<>(chatRoomRepository.findAll());
+        // 역순 정렬
         Collections.reverse(result);
 
         return result;
@@ -61,6 +64,16 @@ public class ChatService {
 
     public ChatRoom findByChatName(String roomId) {
         return chatRoomRepository.findByRoomId(roomId);
+    }
+
+    public void deleteChat(String id) {
+        Long chatId = Long.valueOf(id);
+        Optional<ChatMessage> chatMessage = chatMessageRepository.findById(chatId);
+        chatMessageRepository.delete(chatMessage.get());
+    }
+
+    public Optional<ChatMessage> findLast() {
+        return chatMessageRepository.findTopByOrderByIdDesc();
     }
 
 }
