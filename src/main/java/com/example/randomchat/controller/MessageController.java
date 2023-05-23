@@ -47,8 +47,10 @@ public class MessageController {
     }
 
     @GetMapping("/chat/delete/{deleteId}")
-    public void deleteCheat(@PathVariable  String deleteId) {
+    public void deleteCheat(@PathVariable String deleteId, ChatMessage message) {
         chatService.deleteChat(deleteId);
+        message.setId(Long.valueOf(deleteId));
+        sendingOperations.convertAndSend("/topic/chat/room/" + message.getRoomId(), message);
     }
 
     @GetMapping("/chat/username")
